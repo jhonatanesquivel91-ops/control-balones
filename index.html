@@ -812,6 +812,9 @@ input[type="number"]{-moz-appearance:textfield}
   var vCant = 1, vVend = "Yo", vistaActual = "Hoy";
   var pCant = 10, pOverride = false;
   var editandoVend = "";
+  // Solo escribimos sobre un dia que pudimos leer de verdad. Si la lectura
+  // fallo, escribir encima borraria lo que ya estaba guardado.
+  var diaOk = false;
 
   /* ---------- helpers ---------- */
   function $(id){ return document.getElementById(id); }
@@ -985,9 +988,18 @@ input[type="number"]{-moz-appearance:textfield}
     });
   }
 
-  function leerEstado(){ return api("get", { id:"estado" }).then(function(j){ return j.data; }); }
-  function escribirEstado(o){ return api("set", { id:"estado", data:o }); }
-  function leerDia(f){ return api("get", { id:"dia:" + f }).then(function(j){ return j.data; }); }
+  // El servidor puede tardar en despertar tras un rato sin uso. Un fallo de red
+  // no debe darse por bueno: reintentamos una vez antes de rendirnos.
+  function apiR(op, extra){
+    return api(op, extra).catch(function(e){
+      if(e && e.code && e.code !== "red") throw e;
+      return new Promise(function(r){ setTimeout(r, 1200); }).then(function(){ return api(op, extra); });
+    });
+  }
+
+  function leerEstado(){ return apiR("get", { id:"estado" }).then(function(j){ return j.data; }); }
+  function escribirEstado(o){ return apiR("set", { id:"estado", data:o }); }
+  function leerDia(f){ return apiR("get", { id:"dia:" + f }).then(function(j){ return j.data; }); }
   function escribirDia(o){ return api("set", { id:"dia:" + o.fecha, data:o }); }
   function leerMes(m){ return api("list", { prefix:"dia:" + m }).then(function(j){ return j.docs || []; }); }
   function todosLosDias(){
@@ -1036,8 +1048,13 @@ input[type="number"]{-moz-appearance:textfield}
 
   function agregar(m){
     var f = hoyISO();
-    var p = (dia.fecha === f) ? Promise.resolve() : cargarDia(f);
-    return p.then(function(){
+    var p = (dia.fecha === f && diaOk)
+      ? Promise.resolve(true)
+      : cargarDia(f).then(function(){ return true; },
+                          function(err){ toast(errMsg(err), true); return false; });
+    return p.then(function(listo){
+      // Sin haber leido el dia no escribimos: borrariamos lo ya registrado.
+      if(!listo) return false;
       dia.movs.push(m);
       aplicar(m, 1);
       render();
@@ -1053,9 +1070,11 @@ input[type="number"]{-moz-appearance:textfield}
 
   function cargarDia(f){
     dia = { fecha:f, mes:f.slice(0,7), movs:[] };
+    diaOk = false;
     return leerDia(f).then(function(d){
       if(d && Array.isArray(d.movs)) dia = { fecha:f, mes:f.slice(0,7), movs:d.movs };
-    }, function(){});
+      diaOk = true;
+    });
   }
 
   function borrarMov(fecha, id){
@@ -1968,26 +1987,45 @@ input[type="number"]{-moz-appearance:textfield}
 
   /* ---------- arranque ---------- */
   function entrar(estadoYaLeido){
-    $("gate").hidden = true;
+    // Ojo: un estado en null es legitimo (instalacion nueva, todavia sin datos).
+    // Lo que NO puede pasar es entrar por un fallo de lectura: la app mostraria
+    // la pantalla inicial vacia y al tocar "Guardar y empezar" se escribiria
+    // encima de tu stock y tus precios de verdad.
     var p = (estadoYaLeido !== undefined)
-      ? Promise.resolve(estadoYaLeido)
-      : leerEstado().then(function(e){ return e; }, function(){ return null; });
-    return p.then(function(e){
-      if(e) estado = Object.assign({}, DEF, e);
-      return cargarDia(hoyISO());
-    }).then(function(){
-      $("precioVenta").value = estado.precioVenta;
-      $("pedPrecio").value = estado.precioCompra;
-      render();
+      ? Promise.resolve({ ok:true, e:estadoYaLeido })
+      : leerEstado().then(function(e){ return { ok:true, e:e }; },
+                         function(err){ return { ok:false, err:err }; });
+    return p.then(function(r){
+      if(!r.ok) return noPudoLeer(r.err);
+      if(r.e) estado = Object.assign({}, DEF, r.e);
+      return cargarDia(hoyISO()).then(function(){
+        $("gate").hidden = true;
+        $("precioVenta").value = estado.precioVenta;
+        $("pedPrecio").value = estado.precioCompra;
+        render();
+      }, noPudoLeer);
     });
+  }
+
+  function noPudoLeer(err){
+    estado = Object.assign({}, DEF);
+    pinBuf = ""; gateModo = "entrar";
+    $("gate").hidden = false;
+    gateMostrar("Escribe tu PIN para entrar.",
+      "No se pudieron leer tus datos guardados. " + errMsg(err || {}));
   }
 
   function refrescar(){
     if(!PIN || $("gate").hidden !== true) return;
+    var previo = dia, previoOk = diaOk;
     leerEstado().then(function(e){
       if(e) estado = Object.assign({}, DEF, e);
       return cargarDia(hoyISO());
-    }).then(function(){ render(); }, function(){});
+    }).then(function(){ render(); }, function(){
+      // Si no se pudo refrescar, dejamos en pantalla lo que ya tenias.
+      dia = previo; diaOk = previoOk;
+      render();
+    });
   }
 
   function init(){
@@ -2033,7 +2071,7 @@ input[type="number"]{-moz-appearance:textfield}
 
     setInterval(function(){
       var f = hoyISO();
-      if(dia.fecha !== f && $("gate").hidden) cargarDia(f).then(function(){ render(); });
+      if(dia.fecha !== f && $("gate").hidden) cargarDia(f).then(function(){ render(); }, function(){ render(); });
     }, 60000);
   }
 
