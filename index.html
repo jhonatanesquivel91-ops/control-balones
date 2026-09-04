@@ -14,6 +14,14 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Balones">
+<script>
+(function(){
+  try{
+    var t = localStorage.getItem("gas:tema");
+    if(t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+  }catch(e){}
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -109,6 +117,20 @@ body{
 .pill .dot{width:6px;height:6px;border-radius:50%;background:var(--good);flex:none}
 .pill.is-local .dot{background:var(--warn)}
 .pill.is-wait .dot{background:var(--ink-3)}
+
+.tema-btn{
+  flex:none;width:34px;height:34px;border-radius:10px;
+  border:1px solid var(--line);background:var(--surface-2);color:var(--ink-2);
+  cursor:pointer;display:grid;place-items:center;
+}
+.tema-btn:hover{background:var(--line-2);color:var(--ink)}
+.tema-btn .ico-luna{display:none}
+:root[data-theme="dark"] .tema-btn .ico-sol{display:none}
+:root[data-theme="dark"] .tema-btn .ico-luna{display:block}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) .tema-btn .ico-sol{display:none}
+  :root:not([data-theme="light"]) .tema-btn .ico-luna{display:block}
+}
 
 /* ---------- blocks ---------- */
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
@@ -501,6 +523,10 @@ input[type="number"]{-moz-appearance:textfield}
         <span class="brand-date" id="fechaHoy">&nbsp;</span>
       </span>
     </span>
+    <button class="tema-btn" id="temaBtn" type="button" aria-label="Cambiar a modo claro">
+      <svg class="ico-sol" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"></circle><path d="M12 2.5v2.6M12 18.9v2.6M4.9 4.9l1.85 1.85M17.25 17.25l1.85 1.85M2.5 12h2.6M18.9 12h2.6M4.9 19.1l1.85-1.85M17.25 6.75l1.85-1.85"></path></svg>
+      <svg class="ico-luna" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 14.5A8.5 8.5 0 1 1 9.5 3.5a7 7 0 0 0 11 11z"></path></svg>
+    </button>
     <span class="pill is-wait" id="pillSync"><span class="dot"></span><span id="pillTxt">Conectando</span></span>
   </div>
 </div>
@@ -573,6 +599,10 @@ input[type="number"]{-moz-appearance:textfield}
             <button class="btn" id="btnAddVendRapido" type="button">Agregar</button>
           </div>
         </div>
+        <div class="field">
+          <span class="label">Precio de esta venta</span>
+          <div class="chips" id="chipsPrecioVenta"></div>
+        </div>
         <div class="price-line">
           <span class="cur" id="curVenta">S/</span>
           <input id="precioVenta" type="number" min="0" step="0.10" inputmode="decimal" aria-label="Precio por balón">
@@ -640,6 +670,8 @@ input[type="number"]{-moz-appearance:textfield}
           <input id="pedVac" type="number" min="0" inputmode="numeric">
         </div>
 
+        <span class="label">Precio de esta recarga</span>
+        <div class="chips" id="chipsPrecioPedido"></div>
         <div class="price-line">
           <span class="cur" id="curPedido">S/</span>
           <input id="pedPrecio" type="number" min="0" step="0.10" inputmode="decimal" aria-label="Precio de recarga por balón">
@@ -708,17 +740,27 @@ input[type="number"]{-moz-appearance:textfield}
   <!-- ============ AJUSTES ============ -->
   <section id="vCfg" class="stack" aria-label="Ajustes" hidden>
     <div class="card">
+      <h2 class="sec-label">Apariencia</h2>
+      <div class="form">
+        <span class="label">Cómo se ve la pantalla</span>
+        <div class="chips" id="chipsTema"></div>
+        <p class="hint">Automático sigue el modo de tu celular. Elige Claro u Oscuro si quieres que se quede fijo.</p>
+      </div>
+    </div>
+
+    <div class="card">
       <h2 class="sec-label">Precios</h2>
       <div class="form">
         <div class="grid-2">
-          <div class="field"><span class="label">Pago por recarga</span><input id="cfgCompra" type="number" min="0" step="0.10" inputmode="decimal"></div>
-          <div class="field"><span class="label">Cobro al cliente</span><input id="cfgVenta" type="number" min="0" step="0.10" inputmode="decimal"></div>
+          <div class="field"><span class="label">Precio sugerido de recarga</span><input id="cfgCompra" type="number" min="0" step="0.10" inputmode="decimal"></div>
+          <div class="field"><span class="label">Precio sugerido de venta</span><input id="cfgVenta" type="number" min="0" step="0.10" inputmode="decimal"></div>
         </div>
         <div class="price-line">
-          <span class="cur">Ganas por balón</span>
-          <span class="total"><span class="t-lab">Margen</span><span id="cfgMargen">—</span></span>
+          <span class="cur">Margen con estos precios</span>
+          <span class="total"><span class="t-lab">Ganas</span><span id="cfgMargen">—</span></span>
         </div>
         <div class="field"><span class="label">Símbolo de moneda</span><input id="cfgMoneda" type="text" maxlength="4"></div>
+        <p class="hint">Estos son solo el punto de partida. En cada venta y cada recarga puedes tocar un precio distinto o escribirlo — el sistema recuerda los últimos que usaste.</p>
       </div>
     </div>
 
@@ -802,7 +844,8 @@ input[type="number"]{-moz-appearance:textfield}
   var DEF = {
     llenos:0, vacios:0, precioCompra:40, precioVenta:48,
     moneda:"S/", vendedores:["Yo","Pareja","Vecino"],
-    avisoVacios:10, iniciado:false
+    avisoVacios:10, iniciado:false,
+    preciosVentaFrecuentes:[], preciosCompraFrecuentes:[]
   };
 
   var modo = "wait";
@@ -831,6 +874,61 @@ input[type="number"]{-moz-appearance:textfield}
   function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]; }); }
   function quieto(){ return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches; }
   function svgBalon(cls){ return '<svg class="glyph ' + cls + '" aria-hidden="true"><use href="#' + (cls === "glyph-full" ? "ico-balon" : "ico-balon-o") + '"></use></svg>'; }
+
+  /* ---------- tema claro / oscuro ---------- */
+  // El atributo en <html> es la fuente de verdad de lo que se ve ahora mismo;
+  // localStorage solo intenta recordarlo para la próxima visita, y puede
+  // fallar (navegación privada, almacenamiento bloqueado) sin que eso deba
+  // desincronizar lo que muestran los chips de Ajustes.
+  function temaActivo(){
+    var a = document.documentElement.getAttribute("data-theme");
+    return (a === "light" || a === "dark") ? a : "auto";
+  }
+  function aplicarTema(v){
+    if(v === "light" || v === "dark") document.documentElement.setAttribute("data-theme", v);
+    else document.documentElement.removeAttribute("data-theme");
+    try{ if(v === "auto") localStorage.removeItem("gas:tema"); else localStorage.setItem("gas:tema", v); }catch(e){}
+    pintarTema();
+  }
+  function pintarTema(){
+    var v = temaActivo();
+    $("temaBtn").setAttribute("aria-label", v === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro");
+    var c = $("chipsTema");
+    if(c) Array.prototype.forEach.call(c.children, function(b){
+      b.setAttribute("aria-pressed", b.dataset.tema === v ? "true" : "false");
+    });
+  }
+  function pintarChipsTema(){
+    var c = $("chipsTema");
+    if(c.dataset.done) return;
+    c.innerHTML = [["auto","Automático"],["light","Claro"],["dark","Oscuro"]].map(function(o){
+      return '<button class="chip" type="button" data-tema="' + o[0] + '">' + o[1] + "</button>";
+    }).join("");
+    c.dataset.done = "1";
+  }
+
+  /* ---------- precios recientes ---------- */
+  function empujarPrecio(lista, precio, max){
+    precio = Math.round(precio * 100) / 100;
+    if(!(precio > 0)) return lista || [];
+    var out = [precio].concat((lista || []).filter(function(p){ return p !== precio; }));
+    return out.slice(0, max || 6);
+  }
+  function sugerenciasPrecio(lista, base){
+    if(lista && lista.length) return lista;
+    base = Math.round(base) || 0;
+    var out = [];
+    [0,-1,1,-2,2].forEach(function(d){ var v = base + d; if(v > 0 && out.indexOf(v) === -1) out.push(v); });
+    return out;
+  }
+  function pintarChipsPrecio(contId, lista, base, actual){
+    var el = $(contId);
+    var precios = sugerenciasPrecio(lista, base);
+    el.innerHTML = precios.map(function(p){
+      return '<button class="chip chip-sm" type="button" data-precio="' + p + '" aria-pressed="' +
+        (Math.abs(p - actual) < 0.005 ? "true" : "false") + '">' + money(p) + "</button>";
+    }).join("");
+  }
 
   function pintaGlyphs(el, n, lleno, max){
     max = max || 36;
@@ -1306,6 +1404,7 @@ input[type="number"]{-moz-appearance:textfield}
     if(pi !== document.activeElement && pi.value === "") pi.value = estado.precioVenta;
     $("totalVenta").textContent = money(vCant * precioActual());
     $("btnVenta").disabled = vCant < 1;
+    pintarChipsPrecio("chipsPrecioVenta", estado.preciosVentaFrecuentes, estado.precioVenta, precioActual());
     $("ventaPreview").innerHTML =
       '<span>Después quedan:</span>' +
       '<span class="pv-tag pv-full">' + svgBalon("glyph-full") + "<b>" + (estado.llenos - vCant) + "</b> llenos</span>" +
@@ -1400,7 +1499,9 @@ input[type="number"]{-moz-appearance:textfield}
     $("curPedido").textContent = estado.moneda;
     var pp = $("pedPrecio");
     if(pp !== document.activeElement && pp.value === "") pp.value = estado.precioCompra;
-    $("totalPedido").textContent = money(pCant * Math.max(0, fnum(pp.value, estado.precioCompra)));
+    var precioPedActual = Math.max(0, fnum(pp.value, estado.precioCompra));
+    $("totalPedido").textContent = money(pCant * precioPedActual);
+    pintarChipsPrecio("chipsPrecioPedido", estado.preciosCompraFrecuentes, estado.precioCompra, precioPedActual);
 
     var c = $("chipsPed");
     if(!c.dataset.done){
@@ -1493,6 +1594,8 @@ input[type="number"]{-moz-appearance:textfield}
 
   /* ---------- render: ajustes ---------- */
   function pintarCfg(){
+    pintarChipsTema();
+    pintarTema();
     var set = function(id, v){ var el = $(id); if(el !== document.activeElement) el.value = v; };
     set("cfgCompra", estado.precioCompra);
     set("cfgVenta", estado.precioVenta);
@@ -1583,6 +1686,7 @@ input[type="number"]{-moz-appearance:textfield}
   function hacerVenta(precio){
     var n = vCant;
     var m = { id:uid(), hora:horaAhora(), tipo:"venta", cant:n, precio:precio, costo:estado.precioCompra, vend:vVend };
+    estado.preciosVentaFrecuentes = empujarPrecio(estado.preciosVentaFrecuentes, precio, 6);
     vuela(n);
     try{ if(navigator.vibrate) navigator.vibrate(25); }catch(e){}
     agregar(m).then(function(ok){
@@ -1605,6 +1709,7 @@ input[type="number"]{-moz-appearance:textfield}
     seguir.then(function(ok){
       if(!ok) return;
       estado.precioCompra = pre;
+      estado.preciosCompraFrecuentes = empujarPrecio(estado.preciosCompraFrecuentes, pre, 6);
       agregar({ id:uid(), hora:horaAhora(), tipo:"pedido", cant:cant, vaciosEnt:vac, precio:pre }).then(function(done){
         if(done){
           toast("Pedido registrado: " + cant + " llenos");
@@ -1769,7 +1874,16 @@ input[type="number"]{-moz-appearance:textfield}
       });
     });
     $("nuevoVendRapido").addEventListener("keydown", function(e){ if(e.key === "Enter") $("btnAddVendRapido").click(); });
-    $("precioVenta").addEventListener("input", function(){ $("totalVenta").textContent = money(vCant * precioActual()); });
+    $("precioVenta").addEventListener("input", function(){
+      $("totalVenta").textContent = money(vCant * precioActual());
+      pintarChipsPrecio("chipsPrecioVenta", estado.preciosVentaFrecuentes, estado.precioVenta, precioActual());
+    });
+    $("chipsPrecioVenta").addEventListener("click", function(e){
+      var b = e.target.closest("[data-precio]"); if(!b) return;
+      $("precioVenta").value = b.dataset.precio;
+      $("totalVenta").textContent = money(vCant * precioActual());
+      pintarChipsPrecio("chipsPrecioVenta", estado.preciosVentaFrecuentes, estado.precioVenta, precioActual());
+    });
     $("btnVenta").addEventListener("click", registrarVenta);
     $("setupSave").addEventListener("click", guardarSetup);
 
@@ -1788,7 +1902,16 @@ input[type="number"]{-moz-appearance:textfield}
     });
     $("pedVac").addEventListener("input", pintarPedido);
     $("pedPrecio").addEventListener("input", function(){
-      $("totalPedido").textContent = money(pCant * Math.max(0, fnum(this.value, estado.precioCompra)));
+      var pp = Math.max(0, fnum(this.value, estado.precioCompra));
+      $("totalPedido").textContent = money(pCant * pp);
+      pintarChipsPrecio("chipsPrecioPedido", estado.preciosCompraFrecuentes, estado.precioCompra, pp);
+    });
+    $("chipsPrecioPedido").addEventListener("click", function(e){
+      var b = e.target.closest("[data-precio]"); if(!b) return;
+      $("pedPrecio").value = b.dataset.precio;
+      var pp = Math.max(0, fnum(b.dataset.precio, estado.precioCompra));
+      $("totalPedido").textContent = money(pCant * pp);
+      pintarChipsPrecio("chipsPrecioPedido", estado.preciosCompraFrecuentes, estado.precioCompra, pp);
     });
     $("btnPedido").addEventListener("click", registrarPedido);
     $("goalBtn").addEventListener("click", function(){
@@ -1855,6 +1978,16 @@ input[type="number"]{-moz-appearance:textfield}
       agregarVend($("cfgNuevoVend").value, false).then(function(ok){ if(ok) $("cfgNuevoVend").value = ""; });
     });
     $("cfgNuevoVend").addEventListener("keydown", function(e){ if(e.key === "Enter") $("cfgAddVend").click(); });
+
+    $("temaBtn").addEventListener("click", function(){
+      var efectivoOscuro = temaActivo() === "dark" ||
+        (temaActivo() === "auto" && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+      aplicarTema(efectivoOscuro ? "light" : "dark");
+    });
+    $("chipsTema").addEventListener("click", function(e){
+      var b = e.target.closest("[data-tema]"); if(!b) return;
+      aplicarTema(b.dataset.tema);
+    });
 
     $("shPedido-clip").toggleAttribute("inert", true);
     $("shAjuste-clip").toggleAttribute("inert", true);
@@ -2031,6 +2164,7 @@ input[type="number"]{-moz-appearance:textfield}
 
   function init(){
     bind();
+    pintarTema();
     dia = { fecha:hoyISO(), mes:hoyISO().slice(0,7), movs:[] };
     mesSel = hoyISO().slice(0,7);
     render();
