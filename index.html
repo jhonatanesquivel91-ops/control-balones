@@ -1694,6 +1694,7 @@ input[type="number"]{-moz-appearance:textfield}
       api("borrarTodo").then(function(){
         estado = Object.assign({}, DEF);
         dia = { fecha:hoyISO(), mes:hoyISO().slice(0,7), movs:[] };
+        diaOk = true;
         mesCache = [];
         toast("Todo borrado");
         render(); pintarCfg();
