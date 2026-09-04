@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" role="img" aria-label="Control de Balones">
+  <rect width="192" height="192" rx="44" fill="#151A20"/>
+  <g fill="#FF7A45" transform="translate(60 48) scale(3)">
+    <rect x="10.4" y="0" width="3.2" height="3.6" rx="1"/>
+    <rect x="7.4" y="2.8" width="9.2" height="3.6" rx="1.4"/>
+    <path d="M4 14.2c0-4.3 3.6-7.8 8-7.8s8 3.5 8 7.8v13.2A4.6 4.6 0 0 1 15.4 32H8.6A4.6 4.6 0 0 1 4 27.4z"/>
+  </g>
+</svg>

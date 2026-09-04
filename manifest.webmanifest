@@ -1,0 +1,20 @@
+{
+  "name": "Control de Balones",
+  "short_name": "Balones",
+  "description": "Control diario de tu tienda de balones de gas: llenos, vacíos, ventas y ganancia.",
+  "lang": "es",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#EDF0F3",
+  "theme_color": "#EDF0F3",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
